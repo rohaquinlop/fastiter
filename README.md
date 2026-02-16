@@ -22,6 +22,7 @@ result = par_range(0, 3_000_000).map(lambda x: x * x).sum()
 
 ```bash
 pip install fastiter
+uv add fastiter
 ```
 
 **Requirements**: Python 3.14+ (free-threaded build recommended)
