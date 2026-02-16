@@ -43,10 +43,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/fastiter"
-Documentation = "https://github.com/yourusername/fastiter#readme"
-Repository = "https://github.com/yourusername/fastiter"
-Issues = "https://github.com/yourusername/fastiter/issues"
+Homepage = "https://github.com/rohaquinlop/fastiter"
+Documentation = "https://github.com/rohaquinlop/fastiter#readme"
+Repository = "https://github.com/rohaquinlop/fastiter"
+Issues = "https://github.com/rohaquinlop/fastiter/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
