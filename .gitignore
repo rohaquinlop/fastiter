@@ -65,3 +65,7 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+# AI Agents
+AGENTS.md
+CLAUDE.md
