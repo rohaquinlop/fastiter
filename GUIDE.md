@@ -17,7 +17,7 @@
 pip install fastiter
 
 # Or from source
-git clone https://github.com/yourusername/fastiter.git
+git clone https://github.com/rohaquinlop/fastiter.git
 cd fastiter
 pip install -e .
 ```
@@ -364,4 +364,4 @@ uv run --python 3.14t pytest tests/ -v
 
 ---
 
-**Questions?** [Open an issue](https://github.com/yourusername/fastiter/issues) or start a [discussion](https://github.com/yourusername/fastiter/discussions)
+**Questions?** [Open an issue](https://github.com/rohaquinlop/fastiter/issues) or start a [discussion](https://github.com/rohaquinlop/fastiter/discussions)
