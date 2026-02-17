@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "fastiter"
 version = "0.1.0"
-description = "Parallel Iterators for Python 3.14+ Free-Threaded Mode - High-performance parallel iteration inspired by Rust's Rayon"
+description = "High-performance parallel iterators for Python 3.14+ free-threaded mode"
 readme = "README.md"
 requires-python = ">=3.14"
 license = { text = "MIT" }

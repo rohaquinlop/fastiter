@@ -1,6 +1,6 @@
 # ⚡️ FastIter
 
-> Parallel iterators for Python 3.14+ that actually work
+> Parallel iterators for Python 3.14+
 
 **2-5x faster** processing for large datasets using Python's new free-threaded mode.
 
@@ -153,7 +153,7 @@ result = (
 
 ## How It Works
 
-FastIter uses a divide-and-conquer approach inspired by Rust's Rayon:
+FastIter uses a divide-and-conquer approach:
 
 1. **Split**: Data is recursively divided into chunks
 2. **Distribute**: Chunks are processed across threads
