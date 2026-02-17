@@ -25,10 +25,12 @@ pytest tests/ -v
 ### Code Style
 
 We use:
-- **Black** for formatting (`black fastiter/ tests/`)
-- **Ruff** for linting (`ruff check fastiter/`)
+- **Ruff** for formatting and linting (`ruff format . && ruff check .`)
+- **Ty** for type checking (`ty check`)
 - **Type hints** for all public functions
-- **100 character** line length
+- **80 character** line length (configurable in `.ruff.toml`)
+
+Your editor can automatically sync with the project style using `.ruff.toml`.
 
 ### Testing
 
@@ -108,7 +110,7 @@ Fixes #123
 1. **Create a branch**: `git checkout -b feature/amazing-feature`
 2. **Make changes** and commit
 3. **Run tests**: `pytest tests/ -v`
-4. **Run linters**: `black . && ruff check .`
+4. **Run linters**: `ruff format . && ruff check . && ty check`
 5. **Push**: `git push origin feature/amazing-feature`
 6. **Open PR** with:
    - Clear description of changes

@@ -4,25 +4,19 @@ Basic usage examples for FastIter.
 This demonstrates the core functionality of the parallel iterators library.
 """
 
-from fastiter import par_range, into_par_iter, set_num_threads
+from fastiter import into_par_iter, par_range, set_num_threads
+
 
 def example_map_reduce():
     """Example: Map and reduce operations."""
     print("=== Map and Reduce Example ===")
 
     # Sum of squares from 0 to 999,999
-    result = (
-        par_range(0, 1_000_000)
-        .map(lambda x: x * x)
-        .sum()
-    )
+    result = par_range(0, 1_000_000).map(lambda x: x * x).sum()
     print(f"Sum of squares 0-999,999: {result}")
 
     # Using custom reduce
-    product = (
-        par_range(1, 11)
-        .reduce(lambda: 1, lambda a, b: a * b)
-    )
+    product = par_range(1, 11).reduce(lambda: 1, lambda a, b: a * b)
     print(f"Product of 1-10: {product}")
 
 
@@ -31,19 +25,11 @@ def example_filter():
     print("\n=== Filter Example ===")
 
     # Count even numbers
-    count = (
-        par_range(0, 1_000_000)
-        .filter(lambda x: x % 2 == 0)
-        .count()
-    )
+    count = par_range(0, 1_000_000).filter(lambda x: x % 2 == 0).count()
     print(f"Count of even numbers 0-999,999: {count}")
 
     # Sum of numbers divisible by 3
-    total = (
-        par_range(0, 10_000)
-        .filter(lambda x: x % 3 == 0)
-        .sum()
-    )
+    total = par_range(0, 10_000).filter(lambda x: x % 3 == 0).sum()
     print(f"Sum of numbers divisible by 3 (0-9,999): {total}")
 
 
@@ -80,7 +66,7 @@ def example_lists():
     # Process a list in parallel
     result = (
         into_par_iter(data)
-        .map(lambda x: x ** 2)
+        .map(lambda x: x**2)
         .filter(lambda x: x > 1000)
         .collect()
     )
@@ -88,11 +74,7 @@ def example_lists():
 
     # Work with strings
     words = ["hello", "world", "parallel", "iterators", "python"]
-    lengths = (
-        into_par_iter(words)
-        .map(len)
-        .collect()
-    )
+    lengths = into_par_iter(words).map(len).collect()
     print(f"Word lengths: {lengths}")
 
 
@@ -119,25 +101,17 @@ def example_any_all():
     print("\n=== Any/All Example ===")
 
     # Check if any number is divisible by 7
-    has_seven = (
-        par_range(1, 100)
-        .any(lambda x: x % 7 == 0)
-    )
+    has_seven = par_range(1, 100).any(lambda x: x % 7 == 0)
     print(f"Any number divisible by 7 (1-99): {has_seven}")
 
     # Check if all numbers are positive
-    all_positive = (
-        par_range(1, 1000)
-        .all(lambda x: x > 0)
-    )
+    all_positive = par_range(1, 1000).all(lambda x: x > 0)
     print(f"All numbers positive (1-999): {all_positive}")
 
 
 def example_for_each():
     """Example: Side effects with for_each."""
     print("\n=== For Each Example ===")
-
-    results = []
 
     # Note: for_each with shared state requires synchronization
     # This is just for demonstration

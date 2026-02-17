@@ -279,8 +279,8 @@ class TestEdgeCases:
 
     def test_large_numbers(self):
         """Test with large numbers."""
-        result = par_range(0, 1000).map(lambda x: x ** 2).sum()
-        expected = sum(x ** 2 for x in range(1000))
+        result = par_range(0, 1000).map(lambda x: x**2).sum()
+        expected = sum(x**2 for x in range(1000))
         assert result == expected
 
     def test_negative_numbers(self):
