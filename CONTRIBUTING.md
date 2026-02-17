@@ -6,7 +6,7 @@ Thanks for your interest in contributing! This guide will help you get started.
 
 ```bash
 # 1. Fork and clone
-git clone https://github.com/yourusername/fastiter.git
+git clone https://github.com/rohaquinlop/fastiter.git
 cd fastiter
 
 # 2. Create virtual environment
@@ -156,8 +156,8 @@ Be respectful, inclusive, and constructive. We're all here to learn and build gr
 
 ## Questions?
 
-- Open an [issue](https://github.com/yourusername/fastiter/issues)
-- Start a [discussion](https://github.com/yourusername/fastiter/discussions)
+- Open an [issue](https://github.com/rohaquinlop/fastiter/issues)
+- Start a [discussion](https://github.com/rohaquinlop/fastiter/discussions)
 - Check existing issues and PRs
 
 ## License
