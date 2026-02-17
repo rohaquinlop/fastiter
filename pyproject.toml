@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastiter"
-version = "0.1.0"
+version = "0.1.1"
 description = "High-performance parallel iterators for Python 3.14+ free-threaded mode"
 readme = "README.md"
 requires-python = ">=3.14"
