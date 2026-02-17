@@ -17,7 +17,7 @@
 
 - Simple numeric operations: **5.6x** with 10 threads
 - CPU-intensive work: **3.9x** with 8 threads
-- Best efficiency: **92%** with 4 threads
+- Sweet spot: **3.7x** with 4 threads
 
 ### Implementation Highlights
 

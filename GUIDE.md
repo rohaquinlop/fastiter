@@ -84,7 +84,7 @@ lengths = into_par_iter(words).map(len).collect()
 ```python
 from fastiter import set_num_threads
 
-# Use 4 threads (recommended for best efficiency)
+# Use 4 threads (recommended sweet spot)
 set_num_threads(4)
 
 # Or use all cores
@@ -105,13 +105,13 @@ set_num_threads(os.cpu_count())
 
 ```
 Simple Sum (3M items):
-  4 threads:  3.7x speedup (92% efficiency) ← Sweet spot
-  8 threads:  4.2x speedup (52% efficiency)
-  10 threads: 5.6x speedup (56% efficiency)
+  4 threads:  3.7x speedup ← Sweet spot
+  8 threads:  4.2x speedup
+  10 threads: 5.6x speedup
 
 CPU-Intensive (200k items, heavy computation):
-  4 threads:  2.3x speedup (58% efficiency)
-  8 threads:  3.9x speedup (49% efficiency)
+  4 threads:  2.3x speedup
+  8 threads:  3.9x speedup
 ```
 
 ### Performance Guidelines
@@ -328,7 +328,7 @@ print("GIL disabled:", not sys._is_gil_enabled())
 
 **Q: What thread count should I use?**
 
-- Start with 4 threads (best efficiency)
+- Start with 4 threads (recommended sweet spot)
 - Scale up for larger datasets
 - Measure with your actual workload
 

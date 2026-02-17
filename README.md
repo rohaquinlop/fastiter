@@ -1,4 +1,4 @@
-# FastIter 🚀
+# ⚡️ FastIter
 
 > Parallel iterators for Python 3.14+ that actually work
 
@@ -57,12 +57,12 @@ result = into_par_iter(data).map(lambda x: x * 2).sum()
 
 | Threads | Simple Sum (3M items) | CPU-Intensive Work |
 | ------- | --------------------- | ------------------ |
-| 2       | 1.9x (96% eff)        | 1.9x (95% eff)     |
-| 4       | 3.7x (92% eff)        | 2.3x (58% eff)     |
-| 8       | 4.2x (52% eff)        | 3.9x (49% eff)     |
-| 10      | **5.6x** (56% eff)    | 3.7x (37% eff)     |
+| 2       | 1.9x                  | 1.9x               |
+| 4       | 3.7x                  | 2.3x               |
+| 8       | 4.2x                  | 3.9x               |
+| 10      | **5.6x**              | 3.7x               |
 
-**Sweet spot**: 4 threads for best efficiency (90%+)
+**Sweet spot**: 4 threads for balanced performance
 
 ### When to use FastIter
 
