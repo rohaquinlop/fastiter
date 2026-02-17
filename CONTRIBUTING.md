@@ -25,6 +25,7 @@ pytest tests/ -v
 ### Code Style
 
 We use:
+
 - **Ruff** for formatting and linting (`ruff format . && ruff check .`)
 - **Ty** for type checking (`ty check`)
 - **Type hints** for all public functions
@@ -52,16 +53,17 @@ pytest tests/test_core.py::TestParallelRange::test_sum
 Example: Adding `take(n)` operation
 
 **1. Create Consumer** (`consumers.py`):
+
 ```python
 class TakeConsumer(Generic[T, R]):
     def __init__(self, base: Consumer[T, R], n: int):
         self.base = base
         self.n = n
-    
+
     def consume_iter(self, iterator: Iterator[T]) -> R:
         limited = itertools.islice(iterator, self.n)
         return self.base.consume_iter(limited)
-    
+
     def split(self) -> tuple['TakeConsumer', 'TakeConsumer']:
         # Split n between left and right
         mid = self.n // 2
@@ -70,12 +72,13 @@ class TakeConsumer(Generic[T, R]):
             TakeConsumer(left_base, mid),
             TakeConsumer(right_base, self.n - mid)
         )
-    
+
     def reduce(self, left: R, right: R) -> R:
         return self.base.reduce(left, right)
 ```
 
 **2. Add Method** (`core.py`):
+
 ```python
 def take(self, n: int) -> 'ParallelIterator[T]':
     """Take first n elements."""
@@ -83,6 +86,7 @@ def take(self, n: int) -> 'ParallelIterator[T]':
 ```
 
 **3. Write Tests** (`tests/test_core.py`):
+
 ```python
 def test_take():
     result = par_range(0, 100).take(5).collect()
@@ -113,9 +117,9 @@ Fixes #123
 4. **Run linters**: `ruff format . && ruff check . && ty check`
 5. **Push**: `git push origin feature/amazing-feature`
 6. **Open PR** with:
-   - Clear description of changes
-   - Reference to related issues
-   - Test results
+    - Clear description of changes
+    - Reference to related issues
+    - Test results
 
 ## What to Contribute
 
@@ -136,6 +140,7 @@ Fixes #123
 ### Bug Reports
 
 Include:
+
 - Python version and platform
 - Minimal code to reproduce
 - Expected vs actual behavior
@@ -157,7 +162,6 @@ Be respectful, inclusive, and constructive. We're all here to learn and build gr
 ## Questions?
 
 - Open an [issue](https://github.com/rohaquinlop/fastiter/issues)
-- Start a [discussion](https://github.com/rohaquinlop/fastiter/discussions)
 - Check existing issues and PRs
 
 ## License

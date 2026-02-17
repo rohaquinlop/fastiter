@@ -35,18 +35,21 @@ print(f"Sum: {result}")
 ### Common Patterns
 
 **Transform elements**:
+
 ```python
 squares = par_range(0, 10).map(lambda x: x ** 2).collect()
 # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 ```
 
 **Filter elements**:
+
 ```python
 evens = par_range(0, 20).filter(lambda x: x % 2 == 0).collect()
 # [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 ```
 
 **Custom reduction**:
+
 ```python
 factorial = par_range(1, 11).reduce(
     lambda: 1,              # Identity value
@@ -56,6 +59,7 @@ factorial = par_range(1, 11).reduce(
 ```
 
 **Chain operations**:
+
 ```python
 result = (
     par_range(0, 1000)
@@ -117,12 +121,14 @@ CPU-Intensive (200k items, heavy computation):
 ### Performance Guidelines
 
 **✓ Use FastIter when**:
+
 - Dataset has 500k+ items
 - Operations are CPU-bound
 - Work per element is non-trivial
 - Functions are pure (no shared state)
 
 **✗ Don't use FastIter when**:
+
 - Dataset has <100k items (overhead > benefit)
 - Operations are I/O-bound (use asyncio)
 - Heavy use of lambdas (function call overhead)
@@ -130,11 +136,11 @@ CPU-Intensive (200k items, heavy computation):
 ### Optimal Thread Counts
 
 | Dataset Size | Recommended Threads | Expected Speedup |
-|-------------|---------------------|------------------|
-| < 100k      | 1 (sequential)     | 1.0x             |
-| 100k - 500k | 2-4                | 1.5x - 2.5x      |
-| 500k - 2M   | 4-6                | 2.5x - 4.0x      |
-| > 2M        | 6-10               | 3.5x - 5.6x      |
+| ------------ | ------------------- | ---------------- |
+| < 100k       | 1 (sequential)      | 1.0x             |
+| 100k - 500k  | 2-4                 | 1.5x - 2.5x      |
+| 500k - 2M    | 4-6                 | 2.5x - 4.0x      |
+| > 2M         | 6-10                | 3.5x - 5.6x      |
 
 ### Benchmarking Tips
 
@@ -160,12 +166,14 @@ print(f"Speedup: {s_time / p_time:.2f}x")
 ### When Lambda Overhead Matters
 
 **Slow** (simple lambda, function call overhead dominates):
+
 ```python
 # 2-5x SLOWER than sequential
 par_range(0, 2_000_000).map(lambda x: x * x).sum()
 ```
 
 **Fast** (CPU-intensive work justifies parallelism):
+
 ```python
 def expensive(x):
     result = x
@@ -186,6 +194,7 @@ par_range(0, 200_000).map(expensive).sum()
 FastIter uses a **Producer-Consumer** pattern inspired by Rust's Rayon:
 
 **Producer**: Splittable data source
+
 ```python
 class Producer:
     def split_at(index) -> (left, right)
@@ -193,6 +202,7 @@ class Producer:
 ```
 
 **Consumer**: Processes elements and combines results
+
 ```python
 class Consumer:
     def consume_iter(iterator) -> Result
@@ -218,24 +228,29 @@ class Consumer:
 ### Key Components
 
 **Protocols** (`protocols.py`):
+
 - `Producer[T]` - Splittable data sources
 - `Consumer[T, R]` - Element processors
 - `UnindexedProducer[T]` - For unknown-length streams
 
 **Core** (`core.py`):
+
 - `ParallelIterator` - Base class with operations
 - `IndexedParallelIterator` - With known length
 
 **Bridge** (`bridge.py`):
+
 - Adaptive depth limiting prevents deadlock
 - Formula: `max_depth = max(2, min(4, log2(threads) + 1))`
 - Only top levels parallelize, deeper levels go sequential
 
 **Consumers** (`consumers.py`):
+
 - MapConsumer, FilterConsumer, ReduceConsumer
 - SumConsumer, CountConsumer, etc.
 
 **Producers** (`producers.py`):
+
 - RangeProducer, ListProducer, TupleProducer
 
 ### Why Adaptive Depth Limiting?
@@ -315,6 +330,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add custom operations.
 **Q: Why is parallel slower than sequential?**
 
 A: Common causes:
+
 - Dataset too small (<100k items)
 - Simple lambda operations (function call overhead)
 - Not using free-threaded Python (check `sys._is_gil_enabled()`)
@@ -335,6 +351,63 @@ print("GIL disabled:", not sys._is_gil_enabled())
 **Q: Can I use FastIter with NumPy?**
 
 Not yet - FastIter works with Python iterables. NumPy arrays should use NumPy's own parallelism for now.
+
+---
+
+## FAQ: Common Objections
+
+### "Why not just use `multiprocessing.Pool`?"
+
+Processes give you true parallelism today, on any Python version. FastIter uses threads. The trade-offs are real and worth understanding:
+
+|                    | `multiprocessing.Pool`     | FastIter (threads)            |
+| ------------------ | -------------------------- | ----------------------------- |
+| Parallelism today  | ✅ Any Python              | ✅ Python 3.14t only          |
+| Spawn cost         | ~50–100ms per worker       | ~0.1ms per thread             |
+| Memory per worker  | Full process copy          | Shared memory                 |
+| Data serialisation | Pickle (every call)        | None                          |
+| Shared state       | Requires `Manager` / pipes | Direct access                 |
+| Sweet spot         | Long-running, coarse tasks | Short-to-medium, fine-grained |
+
+**Where processes win**: a task that takes >1s each and spawns a handful of workers. Pickle overhead is tiny relative to runtime, and you don't need free-threading.
+
+**Where FastIter wins**: thousands of small numeric operations on a large dataset. Pickling 10 million integers to worker processes would dominate completely. With threads and no GIL, data never leaves the process.
+
+The right mental model: processes are the hammer you already own; free-threaded threads are a scalpel that didn't exist until 3.14t. FastIter is built for the scalpel.
+
+---
+
+### "GIL removal is still experimental - isn't this risky?"
+
+This is a fair question. Here's the honest picture:
+
+**What "experimental" actually means for 3.14t:**
+
+- The free-threaded build has been available since Python 3.13 (2024) under PEP 703
+- Python 3.14 is a full stable release - `3.14t` is a supported build variant, not a nightly
+- CPython's own test suite runs against the free-threaded build on every commit
+- `sys._is_gil_enabled()` being part of the stable API signals long-term commitment
+
+**What the risks actually are:**
+
+- Some C extensions (NumPy pre-2.x, certain third-party libs) may not be thread-safe yet - but FastIter's core has no C extension dependencies; it is pure Python
+- The free-threaded build may be ~5–10% slower on single-threaded code due to reference counting changes - for FastIter's target workloads (multi-threaded, CPU-bound, large datasets) this is irrelevant
+- The ecosystem is still catching up, but for pure Python code like FastIter, there are no compat concerns
+
+**Why bet on it:**
+
+GIL removal is not a speculative feature. It is the outcome of a decade-long community push (Sam Gross's nogil fork, PEP 703, Guido's endorsement, the CPython core team's full commitment). The trajectory is one-way: the GIL gets more optional in each release, not less.
+
+**If you need to be conservative today:**
+
+FastIter is not the right tool if you can't run `python3.14t`. Use `multiprocessing.Pool` for that. FastIter is a bet on where Python is going, not a polished solution for where it is.
+
+```python
+# Quick sanity check before depending on FastIter
+import sys
+if sys._is_gil_enabled():
+    raise RuntimeError("FastIter requires a free-threaded Python build (python3.14t)")
+```
 
 ---
 

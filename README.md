@@ -13,9 +13,9 @@ result = par_range(0, 3_000_000).map(lambda x: x * x).sum()
 
 ## Why FastIter?
 
-- ✅ **Real speedups**: 2-5.6x faster on CPU-bound work
+- ✅ **Real speedups**: 2-5.6x faster on CPU-bound work (requires free-threaded build)
 - ✅ **Drop-in replacement**: Familiar iterator API
-- ✅ **No GIL**: Takes advantage of Python 3.14's free-threaded mode
+- ✅ **No GIL**: Takes advantage of Python 3.14's free-threaded mode (`python3.14t`)
 - ✅ **Production ready**: 40 tests, comprehensive docs
 
 ## Installation
@@ -25,7 +25,9 @@ pip install fastiter
 uv add fastiter
 ```
 
-**Requirements**: Python 3.14+ (free-threaded build recommended)
+**Requirements**: Python 3.14+ **free-threaded build required** (`python3.14t`)
+
+> ⚠️ **With GIL enabled, FastIter will be slower than sequential code** for CPU-bound work - threads contend on the GIL and add overhead with no benefit. Free-threaded mode is not optional for real speedups.
 
 ## Quick Start
 
@@ -163,7 +165,7 @@ Key innovation: **Adaptive depth limiting** prevents thread pool exhaustion whil
 
 ## Benchmarks
 
-Run your own benchmarks:
+Run your own benchmarks (must use free-threaded build):
 
 ```bash
 # Full benchmark suite
@@ -175,6 +177,8 @@ uv run --python 3.14t python main.py
 # Run tests
 uv run --python 3.14t pytest tests/ -v
 ```
+
+> Running benchmarks with `python3.14` (GIL enabled) will show worse-than-sequential numbers - that's expected and correct behavior, not a bug.
 
 ## Architecture
 
@@ -191,16 +195,42 @@ See [GUIDE.md](GUIDE.md) for implementation details.
 
 ## Requirements
 
-**Python 3.14+** with free-threaded mode for best performance:
+**Python 3.14+ free-threaded build (`python3.14t`) is required for speedups.**
+
+FastIter uses `ThreadPoolExecutor` under the hood. With the GIL enabled, Python threads cannot run CPU-bound bytecode simultaneously - they serialize and add overhead, making parallel execution **slower** than sequential for the workloads FastIter targets. Free-threading is not a recommendation; it is what makes the library work.
 
 ```bash
-# Check if you have the right Python
-python3.14t --version
-# Should show: Python 3.14.x free-threading build
+# Install the free-threaded build
+uv python install 3.14t   # or pyenv install 3.14t
 
 # Verify GIL is disabled
 python3.14t -c "import sys; print('GIL disabled:', not sys._is_gil_enabled())"
+# Should print: GIL disabled: True
+
+# If you import FastIter with the GIL enabled, you will see a RuntimeWarning
 ```
+
+**What happens without free-threading?**
+
+| Mode                    | Result                                                       |
+| ----------------------- | ------------------------------------------------------------ |
+| `python3.14t` (GIL off) | ✅ 2–5.6x speedup                                            |
+| `python3.14` (GIL on)   | ❌ Slower than sequential (thread overhead + GIL contention) |
+| Python < 3.14           | ❌ Not supported                                             |
+
+## FAQ
+
+**Why threads instead of `multiprocessing.Pool`?**
+
+Processes require pickling every argument and result across a process boundary. For a 10M-element numeric operation, that serialisation cost dominates - you'd spend more time copying data than computing. Threads share memory directly, so the only overhead is task submission and result collection. With the GIL gone, threads get true parallel CPU execution with none of the process spawn (~50–100ms) or pickle cost. For fine-grained numeric work, threads win decisively.
+
+If you have a handful of coarse, long-running tasks (seconds each, not microseconds), `multiprocessing.Pool` is still the right tool.
+
+**Isn't free-threaded Python still experimental?**
+
+"Experimental" describes the ecosystem catch-up, not the feature itself. The free-threaded build (`3.14t`) is a fully supported CPython release variant - it ships with the same test suite, same stability guarantees, and `sys._is_gil_enabled()` is stable API. The risk is with C extensions that aren't thread-safe yet; FastIter has no C extension dependencies, so that risk doesn't apply here.
+
+The direction is one-way: PEP 703 is accepted, the CPython core team is committed, and the GIL becomes more optional each release. FastIter is built for where Python is going.
 
 ## Contributing
 

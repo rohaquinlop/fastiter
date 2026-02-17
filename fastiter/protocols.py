@@ -1,8 +1,7 @@
 """
 Core protocol definitions for parallel iterators.
 
-These protocols define the interface that parallel iterators must implement,
-following a design inspired by Rust's Rayon library.
+These protocols define the interface that parallel iterators must implement
 """
 
 from abc import abstractmethod

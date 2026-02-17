@@ -8,7 +8,6 @@
 - 🚀 2-5.6x speedups on CPU-bound workloads
 - 📦 Rich API: `map`, `filter`, `reduce`, `sum`, `count`, `min`, `max`, `any`, `all`
 - 🔧 Auto-configures thread count based on CPU cores
-- 🏗️ Rayon-inspired architecture: Producer/Consumer pattern
 - ✅ 40 passing tests with comprehensive coverage
 
 ### Performance
