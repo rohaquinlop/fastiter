@@ -233,4 +233,4 @@ MIT License - see [LICENSE](LICENSE)
 
 **Made with ❤️ for high-performance Python**
 
-[GitHub](https://github.com/yourusername/fastiter) • [Issues](https://github.com/yourusername/fastiter/issues)
+[GitHub](https://github.com/rohaquinlop/fastiter) • [Issues](https://github.com/rohaquinlop/fastiter/issues)
