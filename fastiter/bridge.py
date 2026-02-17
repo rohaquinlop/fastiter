@@ -15,7 +15,7 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 
-def bridge(
+def bridge[T, R](
     producer: Producer[T], consumer: Consumer[T, R], depth: int = 0
 ) -> R:
     """
@@ -76,7 +76,7 @@ def bridge(
     return consumer.reduce(left_result, right_result)
 
 
-def bridge_unindexed(
+def bridge_unindexed[T, R](
     producer: UnindexedProducer[T], consumer: Consumer[T, R], depth: int = 0
 ) -> R:
     """
@@ -123,7 +123,9 @@ def bridge_unindexed(
     return consumer.reduce(left_result, right_result)
 
 
-def sequential_bridge(producer: Producer[T], consumer: Consumer[T, R]) -> R:
+def sequential_bridge[T, R](
+    producer: Producer[T], consumer: Consumer[T, R]
+) -> R:
     """
     Bridge a producer and consumer sequentially (no parallelism).
 

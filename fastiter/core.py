@@ -92,8 +92,8 @@ class ParallelIterator[T](ABC):
         return FoldIterator(self, identity, fold_op)
 
     def reduce(
-        self, identity: Callable[[], R], reduce_op: Callable[[R, R], R]
-    ) -> R:
+        self, identity: Callable[[], T], reduce_op: Callable[[T, T], T]
+    ) -> T:
         """
         Reduce all elements to a single value in parallel.
 

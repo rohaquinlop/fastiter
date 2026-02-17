@@ -1,0 +1,40 @@
+# Ruff configuration for fastiter project
+# This file helps editors sync with the project's code style
+
+# Same as pyproject.toml settings
+line-length = 80
+target-version = "py314"
+
+# Format configuration
+[format]
+quote-style = "double"
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 88
+
+# Lint configuration
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Ignore specific rules if needed
+ignore = []
+
+[lint.isort]
+known-first-party = ["fastiter"]
+force-single-line = false
+split-on-trailing-comma = false
+
+[lint.pydocstyle]
+convention = "google"

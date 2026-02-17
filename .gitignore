@@ -50,10 +50,11 @@ ENV/
 env.bak/
 venv.bak/
 
-# mypy
+# Type checkers and linters
 .mypy_cache/
 .dmypy.json
 dmypy.json
+.ruff_cache/
 
 # IDE
 .vscode/

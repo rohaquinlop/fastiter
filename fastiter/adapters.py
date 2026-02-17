@@ -6,7 +6,7 @@ from common Python data structures.
 """
 
 from collections.abc import Callable, Iterable, Sequence
-from typing import TypeVar, overload
+from typing import TypeVar, cast, overload
 
 from .core import IndexedParallelIterator
 from .producers import ListProducer, RangeProducer, TupleProducer
@@ -156,14 +156,14 @@ def into_par_iter[T](
     Example:
         >>> from fastiter import into_par_iter
         >>> data = [1, 2, 3, 4, 5]
-        >>> result = into_par_iter(data).map(lambda x: x ** 2).collect()
+        >>> result = into_par_iter(data).map(lambda x: x**2).collect()
     """
     if isinstance(data, range):
         return ParallelRange(data.start, data.stop, data.step)
     elif isinstance(data, list | tuple):
-        return ParallelList(data)
+        return ParallelList(cast(Sequence[T], data))
     elif isinstance(data, Sequence):
-        return ParallelList(data)
+        return ParallelList(cast(Sequence[T], data))
     else:
         materialized = list(data)
         return ParallelList(materialized)
@@ -188,7 +188,7 @@ def _add_par_iter_method():
 
         tuple.par_iter = par_iter_tuple  # type: ignore[attr-defined]
 
-    except (TypeError, AttributeError):
+    except TypeError, AttributeError:
         # Built-in types can't be modified in CPython
         # This is expected, just skip
         pass
