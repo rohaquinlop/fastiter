@@ -171,12 +171,7 @@ def bench_list_processing():
     data = list(range(N))
 
     def parallel():
-        return (
-            into_par_iter(data)
-            .map(_square_of_item)
-            .filter(_is_even)
-            .count()
-        )
+        return into_par_iter(data).map(_square_of_item).filter(_is_even).count()
 
     def sequential():
         return sum(1 for x in data if (x**2) % 2 == 0)
