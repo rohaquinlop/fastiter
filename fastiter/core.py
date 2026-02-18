@@ -5,6 +5,8 @@ This module contains the main ParallelIterator and IndexedParallelIterator
 classes that provide parallel versions of common iterator operations.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -17,6 +19,10 @@ from .consumers import (
     FoldConsumer,
     ForEachConsumer,
     MapConsumer,
+    MaxConsumer,
+    MaxKeyConsumer,
+    MinConsumer,
+    MinKeyConsumer,
     ReduceConsumer,
     SumConsumer,
 )
@@ -25,6 +31,34 @@ from .protocols import Consumer, Producer
 T = TypeVar("T")
 U = TypeVar("U")
 R = TypeVar("R")
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers for min / max / any / all
+#
+# These MUST live at module level rather than being defined as nested
+# functions inside min()/max()/any()/all().  In free-threaded CPython
+# (3.14t, no GIL), calling a closure from multiple threads causes
+# contention on the frame's cell objects — all threads serialise on
+# the same lock, eliminating parallelism entirely.  Module-level
+# functions carry no cell state and scale correctly.
+# ---------------------------------------------------------------------------
+
+
+def _identity_false() -> bool:
+    return False
+
+
+def _identity_true() -> bool:
+    return True
+
+
+def _any_reduce(a: bool, b: bool) -> bool:
+    return a or b
+
+
+def _all_reduce(a: bool, b: bool) -> bool:
+    return a and b
 
 
 class ParallelIterator[T](ABC):
@@ -161,25 +195,8 @@ class ParallelIterator[T](ABC):
             The minimum element, or None if iterator is empty
         """
         if key is None:
-
-            def identity():
-                return None
-
-            def reduce_op(a, b):
-                return a if b is None else (b if a is None else min(a, b))
-        else:
-
-            def identity():
-                return None
-
-            def reduce_op(a, b):
-                return (
-                    a
-                    if b is None
-                    else (b if a is None else (a if key(a) <= key(b) else b))
-                )
-
-        return self.reduce(identity, reduce_op)
+            return self.drive_unindexed(MinConsumer())
+        return self.drive_unindexed(MinKeyConsumer(key))
 
     def max(self, key: Callable[[T], Any] | None = None) -> T | None:
         """
@@ -192,25 +209,8 @@ class ParallelIterator[T](ABC):
             The maximum element, or None if iterator is empty
         """
         if key is None:
-
-            def identity():
-                return None
-
-            def reduce_op(a, b):
-                return a if b is None else (b if a is None else max(a, b))
-        else:
-
-            def identity():
-                return None
-
-            def reduce_op(a, b):
-                return (
-                    a
-                    if b is None
-                    else (b if a is None else (a if key(a) >= key(b) else b))
-                )
-
-        return self.reduce(identity, reduce_op)
+            return self.drive_unindexed(MaxConsumer())
+        return self.drive_unindexed(MaxKeyConsumer(key))
 
     def any(self, predicate: Callable[[T], bool] | None = None) -> bool:
         """
@@ -224,14 +224,7 @@ class ParallelIterator[T](ABC):
         """
         if predicate is None:
             predicate = bool
-
-        def identity():
-            return False
-
-        def reduce_op(a, b):
-            return a or b
-
-        return self.map(predicate).reduce(identity, reduce_op)
+        return self.map(predicate).reduce(_identity_false, _any_reduce)
 
     def all(self, predicate: Callable[[T], bool] | None = None) -> bool:
         """
@@ -245,14 +238,7 @@ class ParallelIterator[T](ABC):
         """
         if predicate is None:
             predicate = bool
-
-        def identity():
-            return True
-
-        def reduce_op(a, b):
-            return a and b
-
-        return self.map(predicate).reduce(identity, reduce_op)
+        return self.map(predicate).reduce(_identity_true, _all_reduce)
 
 
 class IndexedParallelIterator(ParallelIterator[T], ABC):

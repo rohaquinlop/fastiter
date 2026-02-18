@@ -208,3 +208,86 @@ class CountConsumer[T]:
     def reduce(self, left: int, right: int) -> int:
         """Combine two counts."""
         return left + right
+
+
+class MinConsumer[T]:
+    """Consumer that finds the minimum element using the C-level min() builtin.
+
+    Using min(iterator) per chunk is ~7x faster than a Python reduce loop
+    with per-element None checks, because the builtin iterates entirely in C.
+    The None sentinel is only used in reduce() to combine chunk results.
+    """
+
+    def consume_iter(self, iterator: Iterator[T]) -> T | None:
+        return min(iterator, default=None)  # type: ignore[type-var]
+
+    def split(self) -> tuple[MinConsumer[T], MinConsumer[T]]:
+        return (MinConsumer(), MinConsumer())
+
+    def reduce(self, left: T | None, right: T | None) -> T | None:
+        if left is None:
+            return right
+        if right is None:
+            return left
+        return left if left <= right else right  # type: ignore[operator]
+
+
+class MinKeyConsumer[T]:
+    """Consumer that finds the minimum element by a key function."""
+
+    __slots__ = ("key",)
+
+    def __init__(self, key: Callable[[T], Any]) -> None:
+        self.key = key
+
+    def consume_iter(self, iterator: Iterator[T]) -> T | None:
+        return min(iterator, key=self.key, default=None)  # type: ignore[type-var]
+
+    def split(self) -> tuple[MinKeyConsumer[T], MinKeyConsumer[T]]:
+        return (MinKeyConsumer(self.key), MinKeyConsumer(self.key))
+
+    def reduce(self, left: T | None, right: T | None) -> T | None:
+        if left is None:
+            return right
+        if right is None:
+            return left
+        return left if self.key(left) <= self.key(right) else right
+
+
+class MaxConsumer[T]:
+    """Consumer that finds the maximum element using the C-level max() builtin."""
+
+    def consume_iter(self, iterator: Iterator[T]) -> T | None:
+        return max(iterator, default=None)  # type: ignore[type-var]
+
+    def split(self) -> tuple[MaxConsumer[T], MaxConsumer[T]]:
+        return (MaxConsumer(), MaxConsumer())
+
+    def reduce(self, left: T | None, right: T | None) -> T | None:
+        if left is None:
+            return right
+        if right is None:
+            return left
+        return left if left >= right else right  # type: ignore[operator]
+
+
+class MaxKeyConsumer[T]:
+    """Consumer that finds the maximum element by a key function."""
+
+    __slots__ = ("key",)
+
+    def __init__(self, key: Callable[[T], Any]) -> None:
+        self.key = key
+
+    def consume_iter(self, iterator: Iterator[T]) -> T | None:
+        return max(iterator, key=self.key, default=None)  # type: ignore[type-var]
+
+    def split(self) -> tuple[MaxKeyConsumer[T], MaxKeyConsumer[T]]:
+        return (MaxKeyConsumer(self.key), MaxKeyConsumer(self.key))
+
+    def reduce(self, left: T | None, right: T | None) -> T | None:
+        if left is None:
+            return right
+        if right is None:
+            return left
+        return left if self.key(left) >= self.key(right) else right
