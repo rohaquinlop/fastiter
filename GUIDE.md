@@ -105,18 +105,26 @@ set_num_threads(os.cpu_count())
 
 ### Benchmark Results
 
-**10-core system, Python 3.14t, GIL disabled**:
+**10-core system, Python 3.14t, GIL disabled, module-level worker functions**:
 
 ```
-Simple Sum (3M items):
-  4 threads:  3.7x speedup ← Sweet spot
-  8 threads:  4.2x speedup
-  10 threads: 5.6x speedup
+Sum of Squares (10M items, map(square).sum()):
+  2 threads:  ~1.4x speedup
+  4 threads:  ~2.0x speedup
+  8 threads:  ~3.3x speedup
+  16 threads: ~5.1x speedup
 
-CPU-Intensive (200k items, heavy computation):
-  4 threads:  2.3x speedup
-  8 threads:  3.9x speedup
+Min / Max over range (10M items):
+  10 threads: ~5.5x speedup
+
+CPU-Intensive (200k items, 20 float ops per element):
+  10 threads: ~4x speedup
 ```
+
+> **Important**: these numbers require worker functions defined at **module level**.
+> Closure functions (lambdas or nested `def` inside another function) cause cell
+> contention in free-threaded CPython and can make parallel code 10–30x _slower_
+> than sequential. See [Closure Cell Contention](#closure-cell-contention-in-free-threaded-python) below.
 
 ### Performance Guidelines
 
@@ -163,16 +171,62 @@ s_time = time.perf_counter() - start
 print(f"Speedup: {s_time / p_time:.2f}x")
 ```
 
-### When Lambda Overhead Matters
+### Closure Cell Contention in Free-Threaded Python
 
-**Slow** (simple lambda, function call overhead dominates):
+This is the most important performance pitfall specific to Python 3.14t.
+
+In free-threaded CPython, every function defined **inside another function** (a closure) carries a reference to its enclosing frame's cell objects. When multiple threads call the same closure simultaneously, they all contend on a per-cell lock — serialising execution and eliminating any parallelism gain.
+
+**Slow** — closure defined inside a function, all threads contend on cell lock:
 
 ```python
-# 2-5x SLOWER than sequential
-par_range(0, 2_000_000).map(lambda x: x * x).sum()
+def run():
+    fn = lambda x: x * x          # closes over run()'s frame
+    par_range(0, 5_000_000).map(fn).sum()   # ~33x slower than sequential
 ```
 
-**Fast** (CPU-intensive work justifies parallelism):
+**Fast** — function defined at module level, no cell state to contend on:
+
+```python
+def square(x):                     # module-level: no closure cells
+    return x * x
+
+par_range(0, 5_000_000).map(square).sum()   # ~3x faster than sequential
+```
+
+The same applies to lambdas passed inline when the call site is itself inside a function:
+
+```python
+# Also slow — the lambda closes over the enclosing function's frame
+def benchmark():
+    return par_range(0, 5_000_000).map(lambda x: x * x).sum()
+```
+
+**Rule of thumb**: any callable you pass to `map()`, `filter()`, `reduce()`, `any()`, or `all()` should be defined at module level (or as a method of a class) to avoid cell contention.
+
+FastIter's own built-in operations (`sum`, `min`, `max`, `count`) use module-level C-callable helpers internally and are not affected by this issue.
+
+### When Lambda Overhead Matters
+
+**Slow** (closure lambda — cell contention serialises threads):
+
+```python
+def run():
+    # Lambda closes over run()'s frame — all threads serialise
+    par_range(0, 5_000_000).map(lambda x: x * x).sum()
+```
+
+**Fast** (module-level function — no contention):
+
+```python
+def square(x):
+    return x * x
+
+# 3-4x FASTER with 10 threads
+par_range(0, 5_000_000).map(square).sum()
+```
+
+**Fast** (CPU-intensive work with module-level function):
 
 ```python
 def expensive(x):
@@ -181,7 +235,7 @@ def expensive(x):
         result = (result * 1.1 + 1) % 1000000
     return int(result)
 
-# 3.9x FASTER with 8 threads
+# 4-5x FASTER with 10 threads
 par_range(0, 200_000).map(expensive).sum()
 ```
 
@@ -329,11 +383,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add custom operations.
 
 **Q: Why is parallel slower than sequential?**
 
-A: Common causes:
+A: Common causes, in order of likelihood:
 
-- Dataset too small (<100k items)
-- Simple lambda operations (function call overhead)
-- Not using free-threaded Python (check `sys._is_gil_enabled()`)
+1. **Closure cell contention** — worker function is defined inside another function (lambda or nested `def`). In free-threaded CPython, all threads serialise on the closure's cell lock. Move the function to module level. This is the most common cause of unexpected slowdowns.
+2. **Dataset too small** — fewer than ~100k items; thread overhead dominates.
+3. **GIL still enabled** — not using the free-threaded build. Check with `sys._is_gil_enabled()`.
+4. **I/O-bound work** — threads don't help; use `asyncio` instead.
 
 **Q: How to verify GIL is disabled?**
 
@@ -397,8 +452,11 @@ if sys._is_gil_enabled():
 # Basic usage examples
 uv run --python 3.14t python examples/basic_usage.py
 
-# Performance benchmarks
+# Performance benchmarks (FastIter vs sequential)
 uv run --python 3.14t python benchmarks/benchmark.py
+
+# FastIter vs multiprocessing.Pool
+uv run --python 3.14t python benchmarks/benchmark_vs_multiprocessing.py
 
 # Interactive demo
 uv run --python 3.14t python main.py

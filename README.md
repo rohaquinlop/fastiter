@@ -219,7 +219,20 @@ python3.14t -c "import sys; print('GIL disabled:', not sys._is_gil_enabled())"
 
 **Why threads instead of `multiprocessing.Pool`?**
 
-Processes require pickling every argument and result across a process boundary. For a 10M-element numeric operation, that serialisation cost dominates - you'd spend more time copying data than computing. Threads share memory directly, so the only overhead is task submission and result collection. With the GIL gone, threads get true parallel CPU execution with none of the process spawn (~50–100ms) or pickle cost. For fine-grained numeric work, threads win decisively.
+Processes require pickling every argument and result across a process boundary ([Python docs: Exchanging objects between processes](https://docs.python.org/3/library/multiprocessing.html#exchanging-objects-between-processes)). For fine-grained numeric operations on large datasets, that serialisation cost dominates — you spend more time copying data than computing it. Threads share memory directly, so the only overhead is task submission and result collection. With the GIL gone, threads get true parallel CPU execution with none of the process spawn (~50–100ms per worker) or pickle cost.
+
+|                    | `multiprocessing.Pool`                                                                               | FastIter (threads)                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Spawn cost         | ~50–100ms per worker                                                                                 | ~0.1ms per thread                       |
+| Data serialisation | Pickle on every call ([docs](https://docs.python.org/3/library/pickle.html#comparison-with-marshal)) | None (shared memory)                    |
+| Memory per worker  | Full process copy                                                                                    | Shared                                  |
+| Sweet spot         | Few coarse, long-running tasks                                                                       | Many fine-grained ops on large datasets |
+
+You can measure this directly with the included benchmark:
+
+```bash
+uv run --python 3.14t python benchmarks/benchmark_vs_multiprocessing.py
+```
 
 If you have a handful of coarse, long-running tasks (seconds each, not microseconds), `multiprocessing.Pool` is still the right tool.
 
