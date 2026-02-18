@@ -2,14 +2,66 @@
 Benchmarks comparing FastIter with standard Python iteration.
 
 Run this with Python 3.14+ in free-threaded mode for best results:
-    python3.14t benchmark.py
+    uv run --python 3.14t python benchmarks/benchmark.py
+
+NOTE: worker functions must be defined at module level, not inside closures.
+In free-threaded CPython (3.14t), calling a closure from multiple threads
+causes contention on the frame's cell objects, serialising execution and
+erasing all parallelism gains. Module-level functions share no mutable cell
+state and scale correctly across threads.
 """
 
+import os
 import time
 from collections.abc import Callable
 from typing import Any
 
 from fastiter import into_par_iter, par_range, set_num_threads
+
+# ---------------------------------------------------------------------------
+# Module-level worker functions (required for correct free-threaded scaling)
+# ---------------------------------------------------------------------------
+
+
+def _square(x: int) -> int:
+    return x * x
+
+
+def _double(x: int) -> int:
+    return x * 2
+
+
+def _increment(x: int) -> int:
+    return x + 1
+
+
+def _square_of_item(x: int) -> int:
+    return x**2
+
+
+def _is_even(x: int) -> bool:
+    return x % 2 == 0
+
+
+def _divisible_by_3(x: int) -> bool:
+    return x % 3 == 0
+
+
+def _divisible_by_7(x: int) -> bool:
+    return x % 7 == 0
+
+
+def _add(a: int, b: int) -> int:
+    return a + b
+
+
+def _zero() -> int:
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Benchmark harness
+# ---------------------------------------------------------------------------
 
 
 def benchmark(
@@ -63,12 +115,17 @@ def benchmark(
     return speedup
 
 
+# ---------------------------------------------------------------------------
+# Individual benchmarks
+# ---------------------------------------------------------------------------
+
+
 def bench_sum_of_squares():
     """Benchmark: Sum of squares."""
     N = 10_000_000
 
     def parallel():
-        return par_range(0, N).map(lambda x: x * x).sum()
+        return par_range(0, N).map(_square).sum()
 
     def sequential():
         return sum(x * x for x in range(N))
@@ -81,7 +138,7 @@ def bench_filter_sum():
     N = 10_000_000
 
     def parallel():
-        return par_range(0, N).filter(lambda x: x % 2 == 0).sum()
+        return par_range(0, N).filter(_is_even).sum()
 
     def sequential():
         return sum(x for x in range(N) if x % 2 == 0)
@@ -96,9 +153,9 @@ def bench_complex_pipeline():
     def parallel():
         return (
             par_range(0, N)
-            .map(lambda x: x * 2)
-            .filter(lambda x: x % 3 == 0)
-            .map(lambda x: x + 1)
+            .map(_double)
+            .filter(_divisible_by_3)
+            .map(_increment)
             .sum()
         )
 
@@ -116,8 +173,8 @@ def bench_list_processing():
     def parallel():
         return (
             into_par_iter(data)
-            .map(lambda x: x**2)
-            .filter(lambda x: x % 2 == 0)
+            .map(_square_of_item)
+            .filter(_is_even)
             .count()
         )
 
@@ -132,7 +189,7 @@ def bench_reduce():
     N = 1_000_000
 
     def parallel():
-        return par_range(1, N).reduce(lambda: 0, lambda a, b: a + b)
+        return par_range(1, N).reduce(_zero, _add)
 
     def sequential():
         result = 0
@@ -144,15 +201,14 @@ def bench_reduce():
 
 
 def bench_min_max():
-    """Benchmark: Finding min and max."""
+    """Benchmark: Finding min and max over a range."""
     N = 10_000_000
-    data = list(range(N))
 
     def parallel():
-        return (into_par_iter(data).min(), into_par_iter(data).max())
+        return par_range(0, N).min(), par_range(0, N).max()
 
     def sequential():
-        return min(data), max(data)
+        return min(range(N)), max(range(N))
 
     return benchmark("Min/Max", parallel, sequential)
 
@@ -162,7 +218,7 @@ def bench_count():
     N = 10_000_000
 
     def parallel():
-        return par_range(0, N).filter(lambda x: x % 7 == 0).count()
+        return par_range(0, N).filter(_divisible_by_7).count()
 
     def sequential():
         return sum(1 for x in range(N) if x % 7 == 0)
@@ -182,13 +238,15 @@ def scaling_benchmark():
 
     for num_threads in thread_counts:
         set_num_threads(num_threads)
+        # Warm up the newly created executor before timing.
+        par_range(0, 10_000).map(_square).sum()
 
         # Run benchmark
         iterations = 3
         run_times = []
         for _ in range(iterations):
             start = time.perf_counter()
-            _result = par_range(0, N).map(lambda x: x * x).sum()
+            _result = par_range(0, N).map(_square).sum()
             end = time.perf_counter()
             run_times.append(end - start)
 
@@ -213,14 +271,20 @@ def main():
     print("Run with Python 3.14+ in free-threaded mode for best results.")
     print("=" * 60)
 
-    # Set thread count
-    import os
-
     num_threads = int(
         os.environ.get("FASTITER_NUM_THREADS", os.cpu_count() or 4)
     )
     set_num_threads(num_threads)
     print(f"\nUsing {num_threads} threads")
+
+    # Thread scaling runs first so its executor teardown loop doesn't affect
+    # the main benchmarks that follow.
+    scaling_benchmark()
+
+    # Restore the intended thread count and warm up the executor before
+    # the first timed benchmark.
+    set_num_threads(num_threads)
+    par_range(0, 10_000).map(_square).sum()
 
     # Run benchmarks
     speedups = []
@@ -240,9 +304,6 @@ def main():
     print(f"Average speedup: {avg_speedup:.2f}x")
     print(f"Best speedup:    {max(speedups):.2f}x")
     print(f"Worst speedup:   {min(speedups):.2f}x")
-
-    # Thread scaling
-    scaling_benchmark()
 
 
 if __name__ == "__main__":
