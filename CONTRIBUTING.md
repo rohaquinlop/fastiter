@@ -170,4 +170,4 @@ By contributing, you agree your contributions will be licensed under the MIT Lic
 
 ---
 
-**Thank you for contributing! 🚀**
+Thanks for contributing!

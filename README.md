@@ -1,22 +1,19 @@
-# ⚡️ FastIter
+# FastIter
 
-> Parallel iterators for Python 3.14+
-
-**2-5x faster** processing for large datasets using Python's new free-threaded mode.
+Parallel iterators for Python 3.14+, built on the free-threaded mode (no GIL).
 
 ```python
 from fastiter import par_range
 
-# Process 3 million items in parallel - 5.6x faster!
 result = par_range(0, 3_000_000).map(lambda x: x * x).sum()
 ```
 
-## Why FastIter?
+## Features
 
-- ✅ **Real speedups**: 2-5.6x faster on CPU-bound work (requires free-threaded build)
-- ✅ **Drop-in replacement**: Familiar iterator API
-- ✅ **No GIL**: Takes advantage of Python 3.14's free-threaded mode (`python3.14t`)
-- ✅ **Production ready**: 40 tests, comprehensive docs
+- Parallel processing for CPU-bound work on large datasets
+- Familiar iterator API (`map`, `filter`, `reduce`, `sum`, etc.)
+- Requires Python 3.14 free-threaded build (`python3.14t`)
+- 40 tests
 
 ## Installation
 
@@ -115,7 +112,7 @@ set_num_threads(4)      # Set thread count
 
 ## Examples
 
-**CPU-intensive work** (where FastIter shines):
+**CPU-intensive work**:
 
 ```python
 def expensive_computation(x):
@@ -161,7 +158,7 @@ FastIter uses a divide-and-conquer approach:
 2. **Distribute**: Chunks are processed across threads
 3. **Reduce**: Results are combined back together
 
-Key innovation: **Adaptive depth limiting** prevents thread pool exhaustion while maximizing parallelism.
+**Adaptive depth limiting** is used to prevent thread pool exhaustion.
 
 ## Benchmarks
 
@@ -230,7 +227,7 @@ If you have a handful of coarse, long-running tasks (seconds each, not microseco
 
 "Experimental" describes the ecosystem catch-up, not the feature itself. The free-threaded build (`3.14t`) is a fully supported CPython release variant - it ships with the same test suite, same stability guarantees, and `sys._is_gil_enabled()` is stable API. The risk is with C extensions that aren't thread-safe yet; FastIter has no C extension dependencies, so that risk doesn't apply here.
 
-The direction is one-way: PEP 703 is accepted, the CPython core team is committed, and the GIL becomes more optional each release. FastIter is built for where Python is going.
+PEP 703 is accepted and the GIL becomes more optional each release.
 
 ## Contributing
 
@@ -253,14 +250,12 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-**v0.1.0** - Production ready
+**v0.1.0** - Experimental / locally tested
 
 - 40 passing tests
 - 2-5.6x measured speedups
 - Complete documentation
 
 ---
-
-**Made with ❤️ for high-performance Python**
 
 [GitHub](https://github.com/rohaquinlop/fastiter) • [Issues](https://github.com/rohaquinlop/fastiter/issues)

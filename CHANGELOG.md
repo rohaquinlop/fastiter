@@ -4,26 +4,24 @@
 
 ### Features
 
-- ✨ Parallel iterators for Python 3.14+ free-threaded mode
-- 🚀 2-5.6x speedups on CPU-bound workloads
-- 📦 Rich API: `map`, `filter`, `reduce`, `sum`, `count`, `min`, `max`, `any`, `all`
-- 🔧 Auto-configures thread count based on CPU cores
-- ✅ 40 passing tests with comprehensive coverage
+- Parallel iterators for Python 3.14+ free-threaded mode
+- API: `map`, `filter`, `reduce`, `sum`, `count`, `min`, `max`, `any`, `all`
+- Auto-detects thread count based on CPU cores
+- 40 tests
 
 ### Performance
 
-**Measured speedups** (10-core system, GIL disabled):
+Measured on a 10-core system with GIL disabled:
 
-- Simple numeric operations: **5.6x** with 10 threads
-- CPU-intensive work: **3.9x** with 8 threads
-- Sweet spot: **3.7x** with 4 threads
+- Simple numeric operations: 5.6x with 10 threads
+- CPU-intensive work: 3.9x with 8 threads
+- 4 threads: 3.7x (balanced)
 
-### Implementation Highlights
+### Implementation Notes
 
-- **Adaptive depth limiting**: Prevents thread pool deadlock
-- **Smart work distribution**: `max_depth = max(2, min(4, log2(threads) + 1))`
-- **Optimized defaults**: `min_split_size=10000`, `max_depth=8`
-- **GIL-free**: Fully leverages Python 3.14's free-threaded mode
+- Adaptive depth limiting to prevent thread pool deadlock
+- `max_depth = max(2, min(4, log2(threads) + 1))`
+- Defaults: `min_split_size=10000`, `max_depth=8`
 
 ### Known Limitations
 

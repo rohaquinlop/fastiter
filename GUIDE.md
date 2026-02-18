@@ -103,7 +103,7 @@ set_num_threads(os.cpu_count())
 
 ## Performance Guide
 
-### Real-World Results
+### Benchmark Results
 
 **10-core system, Python 3.14t, GIL disabled**:
 
@@ -354,11 +354,11 @@ Not yet - FastIter works with Python iterables. NumPy arrays should use NumPy's 
 
 ---
 
-## FAQ: Common Objections
+## FAQ
 
-### "Why not just use `multiprocessing.Pool`?"
+### Why not just use `multiprocessing.Pool`?
 
-Processes give you true parallelism today, on any Python version. FastIter uses threads. The trade-offs are real and worth understanding:
+Processes and threads have different trade-offs:
 
 |                    | `multiprocessing.Pool`     | FastIter (threads)            |
 | ------------------ | -------------------------- | ----------------------------- |
@@ -369,41 +369,21 @@ Processes give you true parallelism today, on any Python version. FastIter uses 
 | Shared state       | Requires `Manager` / pipes | Direct access                 |
 | Sweet spot         | Long-running, coarse tasks | Short-to-medium, fine-grained |
 
-**Where processes win**: a task that takes >1s each and spawns a handful of workers. Pickle overhead is tiny relative to runtime, and you don't need free-threading.
-
-**Where FastIter wins**: thousands of small numeric operations on a large dataset. Pickling 10 million integers to worker processes would dominate completely. With threads and no GIL, data never leaves the process.
-
-The right mental model: processes are the hammer you already own; free-threaded threads are a scalpel that didn't exist until 3.14t. FastIter is built for the scalpel.
+Processes are a good fit for a handful of long-running tasks. FastIter is better suited for many small operations on large datasets, where pickling overhead would dominate.
 
 ---
 
-### "GIL removal is still experimental - isn't this risky?"
+### Is free-threaded Python stable enough to use?
 
-This is a fair question. Here's the honest picture:
+The free-threaded build (`3.14t`) is a supported CPython variant — not experimental in the sense of unstable. The main caveats are:
 
-**What "experimental" actually means for 3.14t:**
+- Some C extensions may not be thread-safe yet. FastIter has no C extension dependencies, so this doesn't apply.
+- Single-threaded performance may be ~5–10% slower due to reference counting changes.
+- The ecosystem is still catching up, but pure Python code works fine.
 
-- The free-threaded build has been available since Python 3.13 (2024) under PEP 703
-- Python 3.14 is a full stable release - `3.14t` is a supported build variant, not a nightly
-- CPython's own test suite runs against the free-threaded build on every commit
-- `sys._is_gil_enabled()` being part of the stable API signals long-term commitment
-
-**What the risks actually are:**
-
-- Some C extensions (NumPy pre-2.x, certain third-party libs) may not be thread-safe yet - but FastIter's core has no C extension dependencies; it is pure Python
-- The free-threaded build may be ~5–10% slower on single-threaded code due to reference counting changes - for FastIter's target workloads (multi-threaded, CPU-bound, large datasets) this is irrelevant
-- The ecosystem is still catching up, but for pure Python code like FastIter, there are no compat concerns
-
-**Why bet on it:**
-
-GIL removal is not a speculative feature. It is the outcome of a decade-long community push (Sam Gross's nogil fork, PEP 703, Guido's endorsement, the CPython core team's full commitment). The trajectory is one-way: the GIL gets more optional in each release, not less.
-
-**If you need to be conservative today:**
-
-FastIter is not the right tool if you can't run `python3.14t`. Use `multiprocessing.Pool` for that. FastIter is a bet on where Python is going, not a polished solution for where it is.
+If you can't run `python3.14t`, use `multiprocessing.Pool` instead. FastIter requires the free-threaded build to be useful.
 
 ```python
-# Quick sanity check before depending on FastIter
 import sys
 if sys._is_gil_enabled():
     raise RuntimeError("FastIter requires a free-threaded Python build (python3.14t)")
