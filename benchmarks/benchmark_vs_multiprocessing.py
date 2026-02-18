@@ -16,8 +16,8 @@ Background on pickling overhead:
     https://docs.python.org/3/library/pickle.html#comparison-with-marshal
 """
 
-import math
 import multiprocessing
+import multiprocessing.pool
 import os
 import time
 from collections.abc import Callable
@@ -96,7 +96,9 @@ def _header(title: str, n: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def bench_sum_of_squares(pool: multiprocessing.Pool, n: int = 5_000_000) -> None:
+def bench_sum_of_squares(
+    pool: multiprocessing.pool.Pool, n: int = 5_000_000
+) -> None:
     """Sum of x² for x in range(n)."""
     _header("Sum of Squares  [map → sum]", n)
 
@@ -122,7 +124,9 @@ def bench_sum_of_squares(pool: multiprocessing.Pool, n: int = 5_000_000) -> None
         print(_row("FastIter (threads)", fi_time, seq_time))
 
 
-def bench_filter_sum(pool: multiprocessing.Pool, n: int = 5_000_000) -> None:
+def bench_filter_sum(
+    pool: multiprocessing.pool.Pool, n: int = 5_000_000
+) -> None:
     """Sum of even numbers in range(n)."""
     _header("Filter Even Numbers → Sum", n)
 
@@ -134,7 +138,9 @@ def bench_filter_sum(pool: multiprocessing.Pool, n: int = 5_000_000) -> None:
     # multiprocessing: map + filter in one pass via _square_if_even
     mp_time, _ = _measure(
         lambda: sum(
-            v for v in pool.map(_square_if_even, range(n), chunksize=chunk) if v is not None
+            v
+            for v in pool.map(_square_if_even, range(n), chunksize=chunk)
+            if v is not None
         )
     )
     print(_row("multiprocessing.Pool.map (filter+sum)", mp_time, seq_time))
@@ -144,7 +150,9 @@ def bench_filter_sum(pool: multiprocessing.Pool, n: int = 5_000_000) -> None:
         print(_row("FastIter (threads)", fi_time, seq_time))
 
 
-def bench_cpu_intensive(pool: multiprocessing.Pool, n: int = 200_000) -> None:
+def bench_cpu_intensive(
+    pool: multiprocessing.pool.Pool, n: int = 200_000
+) -> None:
     """CPU-intensive per-element work — the sweet spot for multiprocessing."""
     _header("CPU-Intensive Work  [expensive fn → sum]", n)
     print("  (This is where multiprocessing.Pool is expected to compete best)")
@@ -163,8 +171,10 @@ def bench_cpu_intensive(pool: multiprocessing.Pool, n: int = 200_000) -> None:
         print(_row("FastIter (threads)", fi_time, seq_time))
 
 
-def bench_overhead_small(pool: multiprocessing.Pool, n: int = 10_000) -> None:
-    """Small dataset — shows spawn/pickle overhead dominates for multiprocessing."""
+def bench_overhead_small(
+    pool: multiprocessing.pool.Pool, n: int = 10_000
+) -> None:
+    """Small dataset — shows spawn/pickle overhead dominates."""
     _header("Small Dataset  [spawn/pickle overhead]", n)
     print("  (Shows that process overhead dominates for small N)")
 
@@ -182,7 +192,7 @@ def bench_overhead_small(pool: multiprocessing.Pool, n: int = 10_000) -> None:
         print(_row("FastIter (threads)", fi_time, seq_time))
 
 
-def bench_pickle_cost(pool: multiprocessing.Pool) -> None:
+def bench_pickle_cost(pool: multiprocessing.pool.Pool) -> None:
     """
     Isolate raw pickling cost: measure how long it takes to pickle
     a 1M-element list vs simply iterating it.  This is the overhead
@@ -213,7 +223,11 @@ def bench_pickle_cost(pool: multiprocessing.Pool) -> None:
 def main() -> None:
     import sys
 
-    gil_status = "disabled" if not sys._is_gil_enabled() else "ENABLED (FastIter speedups won't apply)"
+    gil_status = (
+        "disabled"
+        if not sys._is_gil_enabled()
+        else "ENABLED (FastIter speedups won't apply)"
+    )
     ncpus = os.cpu_count() or 4
 
     print("FastIter vs multiprocessing.Pool Benchmark")
@@ -236,7 +250,10 @@ def main() -> None:
     pool_workers = int(os.environ.get("FASTITER_NUM_THREADS", ncpus))
     print(f"Workers  : {pool_workers} (multiprocessing.Pool)")
     print()
-    print("Speedup column is relative to the sequential baseline (higher = faster).")
+    print(
+        "Speedup column is relative to the sequential baseline"
+        " (higher = faster)."
+    )
     print("Values < 1.0x mean slower than sequential.")
 
     with multiprocessing.Pool(processes=pool_workers) as pool:
@@ -249,9 +266,13 @@ def main() -> None:
     print(f"\n{'=' * 64}")
     print("Notes")
     print(f"{'=' * 64}")
-    print("  • Run with `python3.14t` (free-threaded) for real FastIter speedups.")
+    print(
+        "  • Run with `python3.14t` (free-threaded) for real FastIter speedups."
+    )
     print("  • multiprocessing results are valid under any Python build.")
-    print("  • Pickle cost benchmark isolates serialisation overhead independent")
+    print(
+        "  • Pickle cost benchmark isolates serialisation overhead independent"
+    )
     print("    of parallelism — this is the tax Pool pays on every task batch.")
     print(f"{'=' * 64}\n")
 

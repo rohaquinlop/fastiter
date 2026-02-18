@@ -7,7 +7,7 @@ results from different threads.
 
 import threading
 from collections.abc import Callable, Iterator
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from .protocols import Consumer
 
@@ -219,7 +219,7 @@ class MinConsumer[T]:
     """
 
     def consume_iter(self, iterator: Iterator[T]) -> T | None:
-        return min(iterator, default=None)  # type: ignore[type-var]
+        return min(iterator, default=None)
 
     def split(self) -> tuple[MinConsumer[T], MinConsumer[T]]:
         return (MinConsumer(), MinConsumer())
@@ -241,7 +241,7 @@ class MinKeyConsumer[T]:
         self.key = key
 
     def consume_iter(self, iterator: Iterator[T]) -> T | None:
-        return min(iterator, key=self.key, default=None)  # type: ignore[type-var]
+        return min(iterator, key=self.key, default=None)
 
     def split(self) -> tuple[MinKeyConsumer[T], MinKeyConsumer[T]]:
         return (MinKeyConsumer(self.key), MinKeyConsumer(self.key))
@@ -255,10 +255,12 @@ class MinKeyConsumer[T]:
 
 
 class MaxConsumer[T]:
-    """Consumer that finds the maximum element using the C-level max() builtin."""
+    """
+    Consumer that finds the maximum element using the C-level max() builtin.
+    """
 
     def consume_iter(self, iterator: Iterator[T]) -> T | None:
-        return max(iterator, default=None)  # type: ignore[type-var]
+        return max(iterator, default=None)
 
     def split(self) -> tuple[MaxConsumer[T], MaxConsumer[T]]:
         return (MaxConsumer(), MaxConsumer())
@@ -280,7 +282,7 @@ class MaxKeyConsumer[T]:
         self.key = key
 
     def consume_iter(self, iterator: Iterator[T]) -> T | None:
-        return max(iterator, key=self.key, default=None)  # type: ignore[type-var]
+        return max(iterator, key=self.key, default=None)
 
     def split(self) -> tuple[MaxKeyConsumer[T], MaxKeyConsumer[T]]:
         return (MaxKeyConsumer(self.key), MaxKeyConsumer(self.key))
