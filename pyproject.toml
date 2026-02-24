@@ -58,4 +58,5 @@ addopts = "-v --strict-markers"
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "hypothesis>=6.0.0",
 ]
