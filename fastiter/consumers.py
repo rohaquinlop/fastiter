@@ -1,12 +1,5 @@
-"""
-Consumer implementations for various parallel operations.
-
-Consumers process elements produced by parallel iterators and combine
-results from different threads.
-"""
-
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from typing import Any, TypeVar
 
 from .protocols import Consumer
@@ -293,3 +286,35 @@ class MaxKeyConsumer[T]:
         if right is None:
             return left
         return left if self.key(left) >= self.key(right) else right
+
+
+class FlatMapConsumer[T, U, R]:
+    """Consumer that flat-maps a function over elements before passing
+    to another consumer."""
+
+    def __init__(self, base: Consumer[U, R], func: Callable[[T], Iterable[U]]):
+        self.base = base
+        self.func = func
+
+    def consume_iter(self, iterator: Iterator[T]) -> R:
+        """Flat-map function over iterator elements then consume with base."""
+
+        def flat_gen():
+            for item in iterator:
+                yield from self.func(item)
+
+        return self.base.consume_iter(flat_gen())
+
+    def split(
+        self,
+    ) -> tuple[FlatMapConsumer[T, U, R], FlatMapConsumer[T, U, R]]:
+        """Split by splitting the base consumer."""
+        left_base, right_base = self.base.split()
+        return (
+            FlatMapConsumer(left_base, self.func),
+            FlatMapConsumer(right_base, self.func),
+        )
+
+    def reduce(self, left: R, right: R) -> R:
+        """Reduce by delegating to base consumer."""
+        return self.base.reduce(left, right)

@@ -1,15 +1,8 @@
-"""
-Adapters for converting standard Python objects into parallel iterators.
-
-This module provides the ergonomic interface for creating parallel iterators
-from common Python data structures.
-"""
-
 from collections.abc import Callable, Iterable, Sequence
-from typing import TypeVar, cast, overload
+from typing import Any, TypeVar, cast, overload
 
 from .core import IndexedParallelIterator
-from .producers import ListProducer, RangeProducer, TupleProducer
+from .producers import ListProducer, RangeProducer, TupleProducer, ZipProducer
 from .protocols import Producer
 
 T = TypeVar("T")
@@ -104,6 +97,61 @@ class ParallelList(IndexedParallelIterator[T]):
     def with_producer(self, callback: Callable[[Producer[T]], R]) -> R:
         """Execute a callback with the list producer."""
         return callback(self.producer)
+
+
+class ParallelZip(IndexedParallelIterator[tuple[Any, Any]]):
+    """
+    Parallel iterator over two zipped sequences.
+
+    Created by calling `.zip(other)` on an IndexedParallelIterator.
+    """
+
+    def __init__(self, zip_producer: ZipProducer[Any, Any]):
+        self._zip_producer = zip_producer
+
+    def __len__(self) -> int:
+        return len(self._zip_producer)
+
+    def with_producer(
+        self, callback: Callable[[Producer[tuple[Any, Any]]], R]
+    ) -> R:
+        return callback(self._zip_producer)
+
+
+def _zip_parallel(
+    left: IndexedParallelIterator[Any], right: Any
+) -> ParallelZip:
+    """
+    Build a ParallelZip from a left IndexedParallelIterator and any
+    right iterable.
+
+    The right iterable is materialised to a list if it is not already an
+    IndexedParallelIterator, range, list, or tuple.
+    """
+
+    def build(left_producer: Producer[Any]) -> ParallelZip:
+        if isinstance(right, IndexedParallelIterator):
+
+            def inner(right_producer: Producer[Any]) -> ParallelZip:
+                return ParallelZip(ZipProducer(left_producer, right_producer))
+
+            return right.with_producer(inner)
+        elif isinstance(right, range):
+            right_producer: Producer[Any] = RangeProducer(
+                right.start, right.stop, right.step
+            )
+            return ParallelZip(ZipProducer(left_producer, right_producer))
+        elif isinstance(right, tuple):
+            right_producer = TupleProducer(right)
+            return ParallelZip(ZipProducer(left_producer, right_producer))
+        elif isinstance(right, list):
+            right_producer = ListProducer(right)
+            return ParallelZip(ZipProducer(left_producer, right_producer))
+        else:
+            right_producer = ListProducer(list(right))
+            return ParallelZip(ZipProducer(left_producer, right_producer))
+
+    return left.with_producer(build)
 
 
 def par_range(start: int, stop: int, step: int = 1) -> ParallelRange:

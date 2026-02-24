@@ -1,10 +1,3 @@
-"""
-Configuration for thread pool and parallel execution.
-
-This module manages the global thread pool configuration and provides
-settings for controlling parallel execution behavior.
-"""
-
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor

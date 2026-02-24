@@ -1,10 +1,4 @@
-"""
-Bridge functions that connect producers and consumers.
-
-The bridge implements the divide-and-conquer strategy, splitting work
-across threads and combining results.
-"""
-
+import math
 from concurrent.futures import Future
 from typing import TypeVar
 
@@ -55,8 +49,6 @@ def bridge[T, R](
     left_consumer, right_consumer = consumer.split()
 
     num_threads = config.get_num_threads()
-    import math
-
     max_parallel_depth = max(2, min(4, int(math.log2(num_threads)) + 1))
 
     if depth < max_parallel_depth and num_threads > 1:
@@ -110,15 +102,25 @@ def bridge_unindexed[T, R](
     left_producer, right_producer = split_result
     left_consumer, right_consumer = consumer.split()
 
-    # Execute both halves in parallel
-    executor = config.get_executor()
+    num_threads = config.get_num_threads()
+    max_parallel_depth = max(2, min(4, int(math.log2(num_threads)) + 1))
 
-    left_future: Future[R] = executor.submit(
-        bridge_unindexed, left_producer, left_consumer, depth + 1
-    )
+    if depth < max_parallel_depth and num_threads > 1:
+        executor = config.get_executor()
 
-    right_result = bridge_unindexed(right_producer, right_consumer, depth + 1)
-    left_result = left_future.result()
+        left_future: Future[R] = executor.submit(
+            bridge_unindexed, left_producer, left_consumer, depth + 1
+        )
+
+        right_result = bridge_unindexed(
+            right_producer, right_consumer, depth + 1
+        )
+        left_result = left_future.result()
+    else:
+        left_result = bridge_unindexed(left_producer, left_consumer, depth + 1)
+        right_result = bridge_unindexed(
+            right_producer, right_consumer, depth + 1
+        )
 
     return consumer.reduce(left_result, right_result)
 

@@ -1,9 +1,3 @@
-"""
-Core protocol definitions for parallel iterators.
-
-These protocols define the interface that parallel iterators must implement
-"""
-
 from abc import abstractmethod
 from collections.abc import Iterator
 from typing import Protocol, TypeVar

@@ -1,14 +1,7 @@
-"""
-Core parallel iterator implementations.
-
-This module contains the main ParallelIterator and IndexedParallelIterator
-classes that provide parallel versions of common iterator operations.
-"""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any, TypeVar
 
 from .bridge import bridge
@@ -16,6 +9,7 @@ from .consumers import (
     CollectConsumer,
     CountConsumer,
     FilterConsumer,
+    FlatMapConsumer,
     FoldConsumer,
     ForEachConsumer,
     MapConsumer,
@@ -109,6 +103,18 @@ class ParallelIterator[T](ABC):
             A new parallel iterator of filtered elements
         """
         return FilterIterator(self, predicate)
+
+    def flat_map(self, func: Callable[[T], Iterable[U]]) -> ParallelIterator[U]:
+        """
+        Apply a function to each element and flatten the results.
+
+        Args:
+            func: Function that returns an iterable for each element
+
+        Returns:
+            A new parallel iterator of all flattened elements
+        """
+        return FlatMapIterator(self, func)
 
     def fold(
         self, identity: Callable[[], R], fold_op: Callable[[R, T], R]
@@ -267,6 +273,20 @@ class IndexedParallelIterator(ParallelIterator[T], ABC):
         """
         ...
 
+    def zip(self, other: Any) -> IndexedParallelIterator[tuple[T, Any]]:
+        """
+        Zip this iterator with another iterable, producing pairs.
+
+        Args:
+            other: Any iterable (including another parallel iterator)
+
+        Returns:
+            A parallel iterator of (left, right) tuples
+        """
+        from .adapters import _zip_parallel  # noqa: PLC0415
+
+        return _zip_parallel(self, other)
+
     def drive(self, consumer: Consumer[T, R]) -> R:
         """
         Drive this iterator with an indexed consumer.
@@ -339,3 +359,17 @@ class FoldIterator[T, R](ParallelIterator[R]):
     def drive_unindexed(self, consumer: Consumer[R, Any]) -> Any:
         fold_consumer = FoldConsumer(consumer, self.identity, self.fold_op)
         return self.base.drive_unindexed(fold_consumer)
+
+
+class FlatMapIterator[T, U](ParallelIterator[U]):
+    """Parallel iterator that flat-maps a function over elements."""
+
+    def __init__(
+        self, base: ParallelIterator[T], func: Callable[[T], Iterable[U]]
+    ):
+        self.base = base
+        self.func = func
+
+    def drive_unindexed(self, consumer: Consumer[U, Any]) -> Any:
+        flat_map_consumer = FlatMapConsumer(consumer, self.func)
+        return self.base.drive_unindexed(flat_map_consumer)

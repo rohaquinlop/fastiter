@@ -1,10 +1,3 @@
-"""
-FastIter - Parallel Iterators for Python 3.14+ Free-Threaded Mode
-
-A high-performance parallel iteration library,
-designed to take full advantage of Python 3.14's free-threaded execution.
-"""
-
 import sys
 import warnings
 

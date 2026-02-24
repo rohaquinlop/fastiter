@@ -1,10 +1,3 @@
-"""
-Producer implementations for common data structures.
-
-Producers convert data structures into splittable iterators that can be
-processed in parallel.
-"""
-
 from collections.abc import Iterator, Sequence
 from typing import TypeVar
 
@@ -173,6 +166,34 @@ class TupleProducer(Producer[T]):
     def into_iter(self) -> Iterator[T]:
         """Convert this tuple slice into an iterator."""
         return iter(self.data[self.start : self.end])
+
+
+class ZipProducer[T, U](Producer[tuple[T, U]]):
+    """
+    Producer that zips two producers together into pairs.
+
+    Both producers are split at the same index, keeping their elements aligned.
+    """
+
+    def __init__(self, left: Producer[T], right: Producer[U]):
+        self.left = left
+        self.right = right
+        self._length = min(len(left), len(right))
+
+    def __len__(self) -> int:
+        return self._length
+
+    def split_at(
+        self, index: int
+    ) -> tuple[ZipProducer[T, U], ZipProducer[T, U]]:
+        if index <= 0 or index >= self._length:
+            raise ValueError(f"Invalid split index: {index}")
+        left_l, left_r = self.left.split_at(index)
+        right_l, right_r = self.right.split_at(index)
+        return ZipProducer(left_l, right_l), ZipProducer(left_r, right_r)
+
+    def into_iter(self) -> Iterator[tuple[T, U]]:
+        return zip(self.left.into_iter(), self.right.into_iter(), strict=False)
 
 
 class ChainProducer(Producer[T]):
